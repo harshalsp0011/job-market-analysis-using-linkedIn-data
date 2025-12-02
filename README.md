@@ -1,115 +1,117 @@
-📊 DIC Job Market Analysis Using LinkedIn Data 💼
+# 📊 DIC Job Market Analysis Using LinkedIn Data
 
-A Data Intensive Computing (CSE587) project for analyzing job market trends using LinkedIn data with a Big Data infrastructure.
+Analyze job market trends using LinkedIn data on a Big Data stack (Docker + Hadoop + Spark) for the CSE587 Data Intensive Computing course.
 
-Project Overview
+## 🔎 Overview
+- Ingest, process, and analyze large-scale job postings and skills data.
+- Orchestrated via Docker Compose with a Hadoop (HDFS/YARN) + Spark cluster.
+- Includes notebooks for EDA and a sample Spark job (word count) running on HDFS.
 
-This project utilizes a Big Data infrastructure with Docker, Hadoop, and Apache Spark to ingest, process, and analyze large-scale job market datasets.
+## 🧰 Tech Stack
+- Docker & Docker Compose
+- Hadoop (HDFS, YARN)
+- Apache Spark (PySpark)
+- Jupyter Notebooks (EDA)
 
-🏗️ Infrastructure Setup
+## ✅ Prerequisites
+- Docker Desktop installed and running.
+- Adequate resources allocated to Docker (CPU/RAM) for Hadoop/Spark.
 
-This project requires Docker to spin up a Hadoop cluster and Spark environment.
+## 🚀 Quick Start
+Start the Hadoop + Spark cluster using the provided compose file.
 
-0. Prerequisites
+```bash
+docker compose -f CSE587Project/docker-compose.yaml up -d
+```
 
-Ensure you have Docker installed on your machine.
-
-Get Docker
-
-1. Start the Hadoop Cluster
-
-Run the following command to start the services defined in docker-compose.yaml:
-
-docker compose -f docker-compose.yaml up -d
-
-
-Expected Output:
-
+Expected output (abbreviated):
+```
 [+] Running 5/5
  ✔ Network project_default              Created
  ✔ Container project-resourcemanager-1  Started
  ✔ Container project-namenode-1         Started
  ✔ Container project-datanode1-1        Started
- ✔ Container project-nodemanager1-1     Started 
+ ✔ Container project-nodemanager1-1     Started
+```
 
+To stop and remove the cluster:
+```bash
+docker compose -f CSE587Project/docker-compose.yaml down
+```
 
-📂 Data Ingestion (HDFS)
+## 📂 Data Ingestion to HDFS
+Upload input data to HDFS after the cluster is up.
 
-Once the cluster is running, you need to upload data to the Hadoop Distributed File System (HDFS).
-
-1. Access the NameNode Container
-
+1) Open a shell in the NameNode container:
+```bash
 docker exec -it project-namenode-1 bash
+```
 
-
-You will land in /opt/hadoop.
-
-2. Upload Files
-
-Create an input directory and upload your data (e.g., a text file or dataset).
-
+2) Create the input directory and upload a file:
+```bash
 hdfs dfs -mkdir /input
 hdfs dfs -put README.txt /input/wc.txt
+```
 
-
-3. Verify Upload
-
-Check if the file exists on HDFS:
-
+3) Verify the upload:
+```bash
 hdfs dfs -cat /input/wc.txt
+```
 
+Web UI for HDFS file explorer:
+```
+http://localhost:9870/explorer.html#/
+```
 
-Web Interface: You can also verify files via the browser at http://localhost:9870/explorer.html#/.
+## ⚡ Run a Spark Job (Word Count)
+Submit a simple PySpark job against data stored in HDFS.
 
-⚡ Running Spark Jobs
-
-You can submit PySpark jobs to the cluster using spark-submit.
-
-Example: Word Count (spark.py)
-
-1. Create the script:
-
+1) Create `spark.py` (inside the NameNode shell or your workspace):
+```python
 from pyspark import SparkConf, SparkContext
 
 def main():
     conf = SparkConf().setAppName("WordCountDemo")
     sc = SparkContext(conf=conf)
-    
+
     input_path = "hdfs://namenode/input/wc.txt"
     output_path = "hdfs://namenode/output/wordcount_result"
 
     text_file = sc.textFile(input_path)
-    
-    counts = (text_file
-              .flatMap(lambda line: line.split())
-              .map(lambda word: (word, 1))
-              .reduceByKey(lambda a, b: a + b))
-    
+
+    counts = (
+        text_file
+        .flatMap(lambda line: line.split())
+        .map(lambda word: (word, 1))
+        .reduceByKey(lambda a, b: a + b)
+    )
+
     counts.saveAsTextFile(output_path)
-    
     sc.stop()
 
 if __name__ == "__main__":
     main()
+```
 
-
-2. Submit the Job:
-
-Run the following command inside the container:
-
+2) Submit the job (inside the NameNode shell):
+```bash
 ./spark/bin/spark-submit --master yarn --deploy-mode cluster spark.py
+```
 
+3) Check results on HDFS:
+```bash
+hdfs dfs -ls /output/wordcount_result
+hdfs dfs -cat /output/wordcount_result/part-*
+```
 
-3. Check Results:
+## 🗂️ Repository Structure
+- `CSE587Project/`: Core project files and Docker configuration
+- `phase1/`: Phase 1 report and ingestion scripts
+- `EDA.ipynb`: Exploratory Data Analysis notebook
+- `Local EDA.ipynb`: Local environment analysis
+- `linkedin-jobs-and-skills-eda-project-6.ipynb`: Additional EDA notebook
 
-If successful, results will be stored in /output/wordcount_result on HDFS.
-
-📁 Repository Structure
-
-CSE587Project/: Core project files and Docker configuration.
-
-phase1/: Phase 1 project report and scripts.
-
-EDA.ipynb: Exploratory Data Analysis notebook.
-
-Local EDA.ipynb: Local environment analysis.
+## 📝 Notes
+- If containers don’t start, ensure Docker resources are sufficient.
+- Use the HDFS Web UI to quickly validate file locations.
+- Adapt `spark.py` to your dataset paths and analysis tasks.
